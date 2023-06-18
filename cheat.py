@@ -239,7 +239,7 @@ def output_nfa():
 
     #r = load_regex()
     #reg = r['regex']
-reg = "(a+b)*abb"
+reg = "a*"
 pr = polish_regex(reg)
 et = make_exp_tree(pr)
 fa = compute_regex(et)
