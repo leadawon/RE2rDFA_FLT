@@ -1,3 +1,5 @@
+# Conversion from Regex to NFA
+
 import json
 import sys
 
@@ -57,16 +59,12 @@ def compPrecedence(a, b):
 def compute_regex(exp_t):
     # returns E-NFA
     if exp_t.charType == charType.CONCAT:
-        print(".")
         return do_concat(exp_t)
     elif exp_t.charType == charType.UNION:
-        print("+")
         return do_union(exp_t)
     elif exp_t.charType == charType.KLEENE:
-        print("*")
         return do_kleene_star(exp_t)
     else:
-        print(exp_t.value)
         return eval_symbol(exp_t)
 
 
@@ -224,7 +222,6 @@ def compute_postfix(regexp):
 def polish_regex(regex):
     reg = add_concat(regex)
     regg = compute_postfix(reg)
-    print(regg)
     return regg
 
 
@@ -238,12 +235,91 @@ def output_nfa():
     with open(sys.argv[2], 'w') as outjson:
         outjson.write(json.dumps(nfa, indent = 4))
 
-if __name__ == "__main__":
+
+
     #r = load_regex()
     #reg = r['regex']
-    reg = "(a+b)*abb"
-    pr = polish_regex(reg)
-    et = make_exp_tree(pr)
-    fa = compute_regex(et)
-    #arrange_nfa(fa)
+reg = "(a+b)*abb"
+pr = polish_regex(reg)
+et = make_exp_tree(pr)
+fa = compute_regex(et)
+arrange_nfa(fa)
+#print(nfa)
     #output_nfa()
+
+'''
+{'states': ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8', 'Q9', 'Q10', 'Q11', 'Q12', 'Q13', 'Q14'], 
+'letters': ['$', 'a', 'b'], 
+'transition_function': [['Q1', '$', 'Q2'], ['Q1', '$', 'Q3'], ['Q2', '$', 'Q4'], ['Q2', '$', 'Q5'], ['Q4', 'a', 'Q6'], ['Q6', '$', 'Q7'], ['Q7', '$', 'Q2'], ['Q7', '$', 'Q3'], ['Q3', '$', 'Q8'], ['Q8', 'a', 'Q9'], ['Q9', '$', 'Q10'], ['Q10', 'b', 'Q11'], ['Q11', '$', 'Q12'], ['Q12', 'b', 'Q13'], ['Q5', 'b', 'Q14'], ['Q14', '$', 'Q7']], 
+'start_states': ['Q1'], 
+'final_states': ['Q13']}
+
+
+'''
+import json
+import sys
+
+dfa = {}
+nfa_states = []
+dfa_states = []
+
+def get_power_set(nfa_st):
+    powerset = [[]]
+    for i in nfa_st:
+        for sub in powerset:
+            powerset = powerset + [list(sub) + [i]]
+    return powerset
+
+def load_nfa():
+    global nfa
+    with open(sys.argv[1], 'r') as inpjson:
+        nfa = json.loads(inpjson.read())
+
+def out_dfa():
+    global dfa
+    with open(sys.argv[2], 'w') as outjson:
+        outjson.write(json.dumps(dfa, indent = 4))
+
+if True:
+    dfa['states'] = []
+    dfa['letters'] = nfa['letters']
+    dfa['transition_function'] = []
+    
+    for state in nfa['states']:
+        nfa_states.append(state)
+
+    dfa_states = get_power_set(nfa_states)
+
+
+    dfa['states'] = []
+    for states in dfa_states:
+        temp = []
+        for state in states:
+            temp.append(state)
+        dfa['states'].append(temp)
+
+    for states in dfa_states:
+        for letter in nfa['letters']:
+            q_to = []
+            for state in states:
+                for val in nfa['transition_function']:
+                    start = val[0]
+                    inp = val[1]
+                    end = val[2]
+                    if state == start and letter == inp:
+                        if end not in q_to:
+                            q_to.append(end)
+            q_states = []
+            for i in states:
+                q_states.append(i)
+            dfa['transition_function'].append([q_states, letter, q_to])
+
+    dfa['start_states'] = []
+    for state in nfa['start_states']:
+        dfa['start_states'].append([state])
+    dfa['final_states'] = []
+    for states in dfa['states']:
+        for state in states:
+            if state in nfa['final_states'] and states not in dfa['final_states']:
+                dfa['final_states'].append(states)
+    print(dfa)
